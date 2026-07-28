@@ -1,11 +1,22 @@
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppAlert } from '@/components/AppAlertProvider';
-import { buildSlots, findCurrentUnit, findNextLetter, LetterSlot, TOTAL_LETTERS, Unit, UNITS } from '@/constants/album';
+import { LetterArt } from '@/components/LetterArt';
+import {
+  buildSlots,
+  findCurrentUnit,
+  findNextLetter,
+  LetterSlot,
+  StickerHue,
+  TOTAL_LETTERS,
+  Unit,
+  UNITS,
+} from '@/constants/album';
 import { useAlbumColors } from '@/constants/theme';
 
 const WEEK_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -221,7 +232,7 @@ function UnitPage({
         <Text style={[styles.pageName, { color: colors.inkSoft }]}>{unit.title}</Text>
         <View style={styles.grid}>
           {slots.map((slot) => (
-            <Sticker key={slot.letter} slot={slot} colors={colors} onPress={() => onSlotPress(slot)} />
+            <Sticker key={slot.letter} slot={slot} accent={unit.accent} colors={colors} onPress={() => onSlotPress(slot)} />
           ))}
           <BonusSlot unlocked={isUnitComplete} claimed={isBonusClaimed} colors={colors} onPress={onBonusPress} />
         </View>
@@ -232,10 +243,12 @@ function UnitPage({
 
 function Sticker({
   slot,
+  accent,
   colors,
   onPress,
 }: {
   slot: LetterSlot;
+  accent: StickerHue;
   colors: ReturnType<typeof useAlbumColors>;
   onPress: () => void;
 }) {
@@ -261,14 +274,18 @@ function Sticker({
     );
   }
 
-  const hueColor = colors[slot.hue];
+  // "stuck" — todas as figurinhas coladas da mesma página compartilham a cor da unidade,
+  // como o fundo de time num álbum de Copa; só a arte e a letra mudam por figurinha.
+  const pageColor = colors[accent];
   return (
     <TouchableOpacity
-      style={[styles.slot, styles.slotStuck, { backgroundColor: hueColor, transform: [{ rotate: `${slot.rotation}deg` }] }]}
+      style={[styles.slot, styles.slotStuck, { backgroundColor: pageColor, transform: [{ rotate: `${slot.rotation}deg` }] }]}
       onPress={onPress}
     >
-      <FontAwesome5 name="hand-paper" size={40} color="rgba(255,255,255,0.22)" style={styles.watermark} />
-      <Text style={[styles.slotLetter, { color: colors.card }]}>{slot.letter}</Text>
+      <LetterArt letter={slot.letter} color={colors.card} size={58} />
+      <View style={[styles.letterTag, { backgroundColor: colors.card }]}>
+        <Text style={[styles.letterTagText, { color: pageColor }]}>{slot.letter}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -284,21 +301,39 @@ function BonusSlot({
   colors: ReturnType<typeof useAlbumColors>;
   onPress: () => void;
 }) {
-  const isGold = unlocked || claimed;
+  if (claimed) {
+    return (
+      <TouchableOpacity style={[styles.slot, styles.slotBonusClaimed]} onPress={onPress}>
+        <LinearGradient
+          colors={[colors.amber, colors.raspberry, colors.plum, colors.teal, colors.amber]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.35)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Ionicons name="star" size={22} color="#fff" style={styles.holoIcon} />
+        <Text style={[styles.bonusText, styles.holoIcon, { color: '#fff' }]}>Colada</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={[
         styles.slot,
         styles.slotBonus,
         { borderColor: colors.line },
-        isGold && { backgroundColor: colors.amber, borderColor: colors.amber },
+        unlocked && { backgroundColor: colors.amber, borderColor: colors.amber },
       ]}
       onPress={onPress}
     >
-      <Ionicons name={claimed ? 'star' : 'star-outline'} size={22} color={isGold ? colors.amberInk : colors.inkSoft} />
-      <Text style={[styles.bonusText, { color: isGold ? colors.amberInk : colors.inkSoft }]}>
-        {claimed ? 'Colada' : 'Bônus'}
-      </Text>
+      <Ionicons name="star-outline" size={22} color={unlocked ? colors.amberInk : colors.inkSoft} />
+      <Text style={[styles.bonusText, { color: unlocked ? colors.amberInk : colors.inkSoft }]}>Bônus</Text>
     </TouchableOpacity>
   );
 }
@@ -359,8 +394,20 @@ const styles = StyleSheet.create({
   slotAvailable: { borderWidth: 2, borderStyle: 'dashed', position: 'relative' },
   slotStuck: { overflow: 'hidden', position: 'relative' },
   slotBonus: { borderWidth: 1.6, borderStyle: 'dashed', gap: 4 },
+  slotBonusClaimed: { overflow: 'hidden', gap: 4 },
+  holoIcon: { textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   slotLetter: { fontWeight: '800', fontSize: 26 },
-  watermark: { position: 'absolute' },
+  letterTag: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    minWidth: 18,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  letterTagText: { fontWeight: '800', fontSize: 10.5 },
   flag: {
     position: 'absolute',
     top: -9,
