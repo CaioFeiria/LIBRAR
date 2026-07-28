@@ -17,7 +17,7 @@ import {
   Unit,
   UNITS,
 } from '@/constants/album';
-import { DEMO_CLAIMED_BONUSES, DEMO_COLLECTED_LETTERS } from '@/constants/demoProgress';
+import { DEMO_CLAIMED_BONUSES, DEMO_COLLECTED_LETTERS, DEMO_STREAK_DAYS } from '@/constants/demoProgress';
 import { useAlbumColors } from '@/constants/theme';
 
 const WEEK_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -103,18 +103,21 @@ export default function AlbumScreen() {
           />
         </View>
         <View style={styles.weekRow}>
-          {WEEK_LABELS.map((label, index) => (
-            <View
-              key={label + index}
-              style={[
-                styles.weekDot,
-                { borderColor: colors.line },
-                WEEK_DONE[index] && { backgroundColor: colors.teal, borderColor: colors.teal },
-                index === TODAY_INDEX && { borderColor: colors.raspberry, borderWidth: 2 },
-              ]}
-            />
-          ))}
-          <Text style={[styles.weekLabel, { color: colors.inkSoft }]}>5 dias seguidos</Text>
+          <View style={styles.stampCard}>
+            {WEEK_LABELS.map((label, index) => (
+              <DayStamp
+                key={label + index}
+                label={label}
+                done={WEEK_DONE[index]}
+                isToday={index === TODAY_INDEX}
+                inkColor={colors.teal}
+                colors={colors}
+              />
+            ))}
+          </View>
+          <Text style={[styles.weekLabel, { color: colors.inkSoft }]}>
+            <Text style={{ fontWeight: '800', color: colors.ink }}>{DEMO_STREAK_DAYS}</Text> dias seguidos
+          </Text>
         </View>
       </View>
 
@@ -191,6 +194,37 @@ export default function AlbumScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function DayStamp({
+  label,
+  done,
+  isToday,
+  inkColor,
+  colors,
+}: {
+  label: string;
+  done: boolean;
+  isToday: boolean;
+  inkColor: string;
+  colors: ReturnType<typeof useAlbumColors>;
+}) {
+  return (
+    <View
+      style={[
+        styles.dayCell,
+        { backgroundColor: colors.card, borderColor: colors.line },
+        isToday && { borderColor: colors.raspberry, borderWidth: 2 },
+      ]}
+    >
+      <Text style={[styles.dayLabel, { color: colors.inkSoft }, done && { opacity: 0.3 }]}>{label}</Text>
+      {done && (
+        <View style={[styles.stamp, { borderColor: inkColor }]}>
+          <Ionicons name="checkmark" size={11} color={inkColor} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -342,9 +376,29 @@ const styles = StyleSheet.create({
   hudTally: { fontWeight: '600', fontSize: 13, fontVariant: ['tabular-nums'] },
   progressTrack: { height: 6, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
-  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  weekDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.6 },
-  weekLabel: { marginLeft: 4, fontSize: 11.5, fontWeight: '600' },
+  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stampCard: { flexDirection: 'row', gap: 4 },
+  dayCell: {
+    width: 26,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1.4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  dayLabel: { fontSize: 10, fontWeight: '700' },
+  stamp: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-12deg' }],
+  },
+  weekLabel: { fontSize: 11.5, fontWeight: '600' },
 
   scrollContent: { paddingBottom: 24 },
   sectionLabel: {
