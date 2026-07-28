@@ -10,3 +10,11 @@ O app combina **lições interativas**, **vídeos explicativos** (com animaçõe
 Mais do que um aplicativo de estudos, o LIBRAR é um projeto que busca **aproximar culturas, ampliar a comunicação e contribuir para uma sociedade mais inclusiva**.  
 
 ---
+
+## Configuração
+
+O app envia a foto do sinal capturado para um backend de validação. Copie `.env.example` para `.env` e defina a URL desse backend:
+
+```
+EXPO_PUBLIC_API_URL=http://SEU_IP_LOCAL:5000
+```
