@@ -11,6 +11,7 @@ export interface AlbumColors {
   teal: string;
   plum: string;
   raspberry: string;
+  blue: string;
   locked: string;
 }
 
@@ -25,6 +26,7 @@ const light: AlbumColors = {
   teal: '#1d8a79',
   plum: '#6e5aa8',
   raspberry: '#d9455c',
+  blue: '#3d78c2',
   locked: '#b7ac9c',
 };
 
@@ -39,12 +41,17 @@ const dark: AlbumColors = {
   teal: '#2fa592',
   plum: '#9683d1',
   raspberry: '#f06b80',
+  blue: '#6aa3e8',
   locked: '#4a4237',
 };
 
 export function useAlbumColors(): AlbumColors {
   return useColorScheme() === 'dark' ? dark : light;
 }
+
+// Uma figurinha impressa não muda de cor com o tema do celular — por isso
+// o contorno/verso dela usa sempre este branco-creme fixo, claro ou escuro.
+export const STICKER_WHITE = '#fbf6ec';
 
 /** Converte um hex de 6 dígitos (ex.: colors.amber) num rgba com a opacidade pedida. */
 export function withAlpha(hex: string, alpha: number): string {

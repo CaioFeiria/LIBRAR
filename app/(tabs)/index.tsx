@@ -18,7 +18,8 @@ import {
   UNITS,
 } from '@/constants/album';
 import { DEMO_CLAIMED_BONUSES, DEMO_COLLECTED_LETTERS, DEMO_STREAK_DAYS } from '@/constants/demoProgress';
-import { useAlbumColors } from '@/constants/theme';
+import { getLetterPosition, isMovingSign } from '@/constants/letterInfo';
+import { STICKER_WHITE, useAlbumColors } from '@/constants/theme';
 
 const WEEK_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const WEEK_DONE = [true, true, true, true, true, false, false];
@@ -28,7 +29,7 @@ export default function AlbumScreen() {
   const router = useRouter();
   const colors = useAlbumColors();
   const alert = useAppAlert();
-  const [collected] = useState(DEMO_COLLECTED_LETTERS);
+  const [collected, setCollected] = useState(DEMO_COLLECTED_LETTERS);
   const [claimedBonuses, setClaimedBonuses] = useState(DEMO_CLAIMED_BONUSES);
 
   const currentUnit = useMemo(() => findCurrentUnit(collected, claimedBonuses), [collected, claimedBonuses]);
@@ -82,6 +83,17 @@ export default function AlbumScreen() {
       openLetter(nextLetter);
     } else if (isUnitComplete && !isBonusClaimed) {
       handleBonusPress(currentUnit, isUnitComplete, isBonusClaimed);
+    }
+  };
+
+  // Botão só existe em build de desenvolvimento — não deve ir pra produção.
+  const handleToggleDevFill = () => {
+    if (collected.size === TOTAL_LETTERS) {
+      setCollected(new Set());
+      setClaimedBonuses(new Set());
+    } else {
+      setCollected(new Set(UNITS.flatMap((unit) => unit.letters)));
+      setClaimedBonuses(new Set(UNITS.map((unit) => unit.id)));
     }
   };
 
@@ -193,6 +205,13 @@ export default function AlbumScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {__DEV__ && (
+        <TouchableOpacity style={styles.devFab} onPress={handleToggleDevFill} activeOpacity={0.85}>
+          <Ionicons name="flask-outline" size={15} color="#fff" />
+          <Text style={styles.devFabText}>{collected.size === TOTAL_LETTERS ? 'Resetar (dev)' : 'Preencher tudo (dev)'}</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -307,11 +326,21 @@ function Sticker({
   // "stuck" — todas as figurinhas coladas da mesma página compartilham a cor da unidade,
   // como o fundo de time num álbum de Copa; só a arte e a letra mudam por figurinha.
   const pageColor = colors[accent];
+  const position = getLetterPosition(slot.letter);
+  const moving = isMovingSign(slot.letter);
   return (
     <TouchableOpacity
       style={[styles.slot, styles.slotStuck, { backgroundColor: pageColor, transform: [{ rotate: `${slot.rotation}deg` }] }]}
       onPress={onPress}
     >
+      <View style={[styles.numberTag, { backgroundColor: colors.card }]}>
+        <Text style={[styles.numberTagText, { color: pageColor }]}>{position}</Text>
+      </View>
+      {moving && (
+        <View style={[styles.movementTag, { backgroundColor: colors.card }]}>
+          <Ionicons name="repeat" size={11} color={pageColor} />
+        </View>
+      )}
       <LetterArt letter={slot.letter} color={colors.card} size={58} />
       <View style={[styles.letterTag, { backgroundColor: colors.card }]}>
         <Text style={[styles.letterTagText, { color: pageColor }]}>{slot.letter}</Text>
@@ -442,7 +471,7 @@ const styles = StyleSheet.create({
   },
   slotLocked: { borderWidth: 1.6, borderStyle: 'dashed' },
   slotAvailable: { borderWidth: 2, borderStyle: 'dashed', position: 'relative' },
-  slotStuck: { overflow: 'hidden', position: 'relative' },
+  slotStuck: { overflow: 'hidden', position: 'relative', borderWidth: 5, borderColor: STICKER_WHITE },
   slotBonus: { borderWidth: 1.6, borderStyle: 'dashed', gap: 4 },
   slotBonusClaimed: { overflow: 'hidden', gap: 4 },
   holoIcon: { textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
@@ -458,6 +487,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   letterTagText: { fontWeight: '800', fontSize: 10.5 },
+  numberTag: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    minWidth: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  numberTagText: { fontWeight: '800', fontSize: 9.5 },
+  movementTag: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   flag: {
     position: 'absolute',
     top: -9,
@@ -498,4 +548,27 @@ const styles = StyleSheet.create({
   packTitle: { fontWeight: '800', fontSize: 15, flexShrink: 1 },
   packBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
   packBtnText: { fontWeight: '800', fontSize: 12 },
+
+  devFab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderStyle: 'dashed',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  devFabText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });

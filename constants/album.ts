@@ -1,4 +1,4 @@
-export type StickerHue = 'amber' | 'teal' | 'plum' | 'raspberry';
+export type StickerHue = 'amber' | 'teal' | 'plum' | 'raspberry' | 'blue';
 
 export interface Unit {
   id: string;
@@ -15,7 +15,7 @@ export const UNITS: Unit[] = [
   { id: 'u2', title: 'Formas e curvas', range: 'F–J', letters: ['F', 'G', 'H', 'I', 'J'], accent: 'teal' },
   { id: 'u3', title: 'Sinais em movimento', range: 'K–O', letters: ['K', 'L', 'M', 'N', 'O'], accent: 'plum' },
   { id: 'u4', title: 'Consoantes duplas', range: 'P–T', letters: ['P', 'Q', 'R', 'S', 'T'], accent: 'raspberry' },
-  { id: 'u5', title: 'Fechando o alfabeto', range: 'U–Z', letters: ['U', 'V', 'W', 'X', 'Y', 'Z'], accent: 'amber' },
+  { id: 'u5', title: 'Fechando o alfabeto', range: 'U–Z', letters: ['U', 'V', 'W', 'X', 'Y', 'Z'], accent: 'blue' },
 ];
 
 export const TOTAL_LETTERS = UNITS.reduce((sum, unit) => sum + unit.letters.length, 0);
