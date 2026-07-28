@@ -3,9 +3,10 @@ import axios, { isAxiosError } from 'axios';
 import { CameraCapturedPicture, CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAppAlert } from '@/components/AppAlertProvider';
 import { API_URL } from '@/constants/api';
 import { useAlbumColors } from '@/constants/theme';
 
@@ -75,6 +76,7 @@ export default function LetterScreen() {
   const { letter } = useLocalSearchParams<{ letter: string }>();
   const router = useRouter();
   const colors = useAlbumColors();
+  const alert = useAppAlert();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
@@ -140,14 +142,14 @@ export default function LetterScreen() {
       const captured = await cameraRef.current.takePictureAsync();
       setPhoto(captured);
     } catch {
-      Alert.alert('Erro', 'Não foi possível capturar a foto. Tente novamente.');
+      alert('Erro', 'Não foi possível capturar a foto. Tente novamente.');
     }
   };
 
   const sendPhoto = async () => {
-    if (!photo) return Alert.alert('Erro', 'Nenhuma foto capturada');
+    if (!photo) return alert('Erro', 'Nenhuma foto capturada');
     if (!API_URL) {
-      Alert.alert('Configuração ausente', 'Defina EXPO_PUBLIC_API_URL no arquivo .env para enviar a foto.');
+      alert('Configuração ausente', 'Defina EXPO_PUBLIC_API_URL no arquivo .env para enviar a foto.');
       return;
     }
     setLoading(true);
@@ -159,10 +161,12 @@ export default function LetterScreen() {
     } as any);
     try {
       const res = await axios.post(`${API_URL}/upload`, formData, { timeout: 15000 });
-      if (isMounted.current) Alert.alert('Sucesso', `Resultado: ${res.data.result}`);
+      if (isMounted.current) {
+        alert('Sucesso', `Resultado: ${res.data.result}`, [{ text: 'Continuar', style: 'secondary' }]);
+      }
     } catch (error) {
       const message = isAxiosError(error) ? error.message : 'Falha ao enviar imagem';
-      if (isMounted.current) Alert.alert('Erro', message);
+      if (isMounted.current) alert('Erro', message);
     } finally {
       if (isMounted.current) setLoading(false);
     }

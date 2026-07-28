@@ -47,8 +47,16 @@ export function buildSlots(letters: string[], collected: Set<string>): LetterSlo
   });
 }
 
-export function findCurrentUnit(collected: Set<string>): Unit {
-  return UNITS.find((unit) => !unit.letters.every((letter) => collected.has(letter))) ?? UNITS[UNITS.length - 1];
+/**
+ * A unidade só é considerada "passada" quando todas as letras estão coladas
+ * E a figurinha bônus já foi aberta — assim a página fica visível com o
+ * bônus disponível até o aluno de fato tocar nela.
+ */
+export function findCurrentUnit(collected: Set<string>, claimedBonuses: Set<string>): Unit {
+  return (
+    UNITS.find((unit) => !(unit.letters.every((letter) => collected.has(letter)) && claimedBonuses.has(unit.id))) ??
+    UNITS[UNITS.length - 1]
+  );
 }
 
 export function findNextLetter(unit: Unit, collected: Set<string>): string | null {

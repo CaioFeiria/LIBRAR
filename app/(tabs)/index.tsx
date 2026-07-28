@@ -1,10 +1,11 @@
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { buildSlots, findCurrentUnit, findNextLetter, LetterSlot, TOTAL_LETTERS, UNITS } from '@/constants/album';
+import { useAppAlert } from '@/components/AppAlertProvider';
+import { buildSlots, findCurrentUnit, findNextLetter, LetterSlot, TOTAL_LETTERS, Unit, UNITS } from '@/constants/album';
 import { useAlbumColors } from '@/constants/theme';
 
 const WEEK_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -12,19 +13,24 @@ const WEEK_DONE = [true, true, true, true, true, false, false];
 const TODAY_INDEX = 4;
 
 // Progresso local de demonstração — ainda sem persistência real (AsyncStorage/backend).
-const COLLECTED_LETTERS = new Set(['A', 'B', 'C']);
+// Simulando a Unidade 1 inteira colada, com o bônus desbloqueado e ainda não aberto.
+const COLLECTED_LETTERS = new Set(['A', 'B', 'C', 'D', 'E']);
+const CLAIMED_BONUSES = new Set<string>();
 
 export default function AlbumScreen() {
   const router = useRouter();
   const colors = useAlbumColors();
+  const alert = useAppAlert();
   const [collected] = useState(COLLECTED_LETTERS);
+  const [claimedBonuses, setClaimedBonuses] = useState(CLAIMED_BONUSES);
 
-  const currentUnit = useMemo(() => findCurrentUnit(collected), [collected]);
+  const currentUnit = useMemo(() => findCurrentUnit(collected, claimedBonuses), [collected, claimedBonuses]);
   const currentUnitIndex = UNITS.findIndex((unit) => unit.id === currentUnit.id);
+  const pastUnits = UNITS.slice(0, currentUnitIndex);
   const nextUnit = UNITS[currentUnitIndex + 1];
-  const slots = useMemo(() => buildSlots(currentUnit.letters, collected), [currentUnit, collected]);
   const nextLetter = useMemo(() => findNextLetter(currentUnit, collected), [currentUnit, collected]);
   const isUnitComplete = nextLetter === null;
+  const isBonusClaimed = claimedBonuses.has(currentUnit.id);
 
   const openLetter = (letter: string) => {
     router.push({ pathname: '/letter/[letter]', params: { letter } });
@@ -32,22 +38,44 @@ export default function AlbumScreen() {
 
   const handleSlotPress = (slot: LetterSlot) => {
     if (slot.state === 'locked') {
-      Alert.alert('Ainda bloqueada', 'Complete a letra anterior para destravar essa figurinha.');
+      alert('Ainda bloqueada', 'Complete a letra anterior para destravar essa figurinha.');
+      return;
+    }
+    if (slot.state === 'stuck') {
+      alert(
+        'Figurinha já colada!',
+        `A letra ${slot.letter} já está no seu álbum. Quer colar outra por cima pra caprichar ainda mais essa página?`,
+        [
+          { text: 'Deixar como está', style: 'ghost' },
+          { text: 'Colar outra', style: 'primary', onPress: () => openLetter(slot.letter) },
+        ],
+      );
       return;
     }
     openLetter(slot.letter);
   };
 
-  const handleBonusPress = () => {
-    if (isUnitComplete) {
-      Alert.alert('Figurinha bônus!', `Parabéns por completar a Unidade "${currentUnit.title}".`);
-    } else {
-      Alert.alert('Figurinha bônus', 'Complete todas as letras da unidade para desbloquear a figurinha holográfica.');
+  const handleBonusPress = (unit: Unit, complete: boolean, claimed: boolean) => {
+    if (!complete) {
+      alert('Figurinha bônus', 'Complete todas as letras da unidade para desbloquear a figurinha holográfica.');
+      return;
     }
+    if (claimed) {
+      alert('Figurinha já coletada', `Você já abriu o bônus da Unidade "${unit.title}".`);
+      return;
+    }
+    alert('Figurinha bônus!', `Parabéns por completar a Unidade "${unit.title}".`, [
+      { text: 'Continuar', style: 'secondary' },
+    ]);
+    setClaimedBonuses((prev) => new Set(prev).add(unit.id));
   };
 
   const handleOpenPack = () => {
-    if (nextLetter) openLetter(nextLetter);
+    if (nextLetter) {
+      openLetter(nextLetter);
+    } else if (isUnitComplete && !isBonusClaimed) {
+      handleBonusPress(currentUnit, isUnitComplete, isBonusClaimed);
+    }
   };
 
   return (
@@ -84,22 +112,38 @@ export default function AlbumScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.page}>
-          <View style={[styles.pageTab, { backgroundColor: colors.amber }]}>
-            <Text style={[styles.pageTabText, { color: colors.amberInk }]}>
-              Unidade {currentUnitIndex + 1} · {currentUnit.range}
-            </Text>
-          </View>
-          <View style={[styles.pageSheet, { backgroundColor: colors.card, shadowColor: colors.ink }]}>
-            <Text style={[styles.pageName, { color: colors.inkSoft }]}>{currentUnit.title}</Text>
-            <View style={styles.grid}>
-              {slots.map((slot) => (
-                <Sticker key={slot.letter} slot={slot} colors={colors} onPress={() => handleSlotPress(slot)} />
-              ))}
-              <BonusSlot unlocked={isUnitComplete} colors={colors} onPress={handleBonusPress} />
-            </View>
-          </View>
-        </View>
+        {pastUnits.length > 0 && (
+          <Text style={[styles.sectionLabel, { color: colors.inkSoft }]}>Páginas concluídas — role pra rever</Text>
+        )}
+
+        {pastUnits.map((unit, index) => (
+          <UnitPage
+            key={unit.id}
+            unit={unit}
+            unitNumber={index + 1}
+            collected={collected}
+            isCurrent={false}
+            isBonusClaimed
+            colors={colors}
+            onSlotPress={handleSlotPress}
+            onBonusPress={() => handleBonusPress(unit, true, true)}
+          />
+        ))}
+
+        {pastUnits.length > 0 && (
+          <Text style={[styles.sectionLabel, { color: colors.inkSoft, marginTop: 22 }]}>Página atual</Text>
+        )}
+
+        <UnitPage
+          unit={currentUnit}
+          unitNumber={currentUnitIndex + 1}
+          collected={collected}
+          isCurrent
+          isBonusClaimed={isBonusClaimed}
+          colors={colors}
+          onSlotPress={handleSlotPress}
+          onBonusPress={() => handleBonusPress(currentUnit, isUnitComplete, isBonusClaimed)}
+        />
 
         {nextUnit && (
           <View style={[styles.nextPage, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -114,9 +158,9 @@ export default function AlbumScreen() {
           </View>
         )}
 
-        {nextLetter && (
+        {(nextLetter || (isUnitComplete && !isBonusClaimed)) && (
           <TouchableOpacity
-            style={[styles.pack, { backgroundColor: colors.raspberry }]}
+            style={[styles.pack, { backgroundColor: nextLetter ? colors.raspberry : colors.amber }]}
             onPress={handleOpenPack}
             activeOpacity={0.85}
           >
@@ -125,17 +169,64 @@ export default function AlbumScreen() {
                 <View key={i} style={[styles.scallop, { backgroundColor: colors.paper }]} />
               ))}
             </View>
-            <Text style={[styles.packEyebrow, { color: colors.card }]}>Pacote de hoje</Text>
+            <Text style={[styles.packEyebrow, { color: nextLetter ? colors.card : colors.amberInk }]}>
+              {nextLetter ? 'Pacote de hoje' : 'Unidade completa'}
+            </Text>
             <View style={styles.packRow}>
-              <Text style={[styles.packTitle, { color: colors.card }]}>Praticar a letra {nextLetter}</Text>
-              <View style={[styles.packBtn, { backgroundColor: colors.card }]}>
-                <Text style={[styles.packBtnText, { color: colors.raspberry }]}>Abrir</Text>
+              <Text style={[styles.packTitle, { color: nextLetter ? colors.card : colors.amberInk }]}>
+                {nextLetter ? `Praticar a letra ${nextLetter}` : 'Abrir figurinha bônus'}
+              </Text>
+              <View style={[styles.packBtn, { backgroundColor: nextLetter ? colors.card : colors.amberInk }]}>
+                <Text style={[styles.packBtnText, { color: nextLetter ? colors.raspberry : colors.amber }]}>Abrir</Text>
               </View>
             </View>
           </TouchableOpacity>
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function UnitPage({
+  unit,
+  unitNumber,
+  collected,
+  isCurrent,
+  isBonusClaimed,
+  colors,
+  onSlotPress,
+  onBonusPress,
+}: {
+  unit: Unit;
+  unitNumber: number;
+  collected: Set<string>;
+  isCurrent: boolean;
+  isBonusClaimed: boolean;
+  colors: ReturnType<typeof useAlbumColors>;
+  onSlotPress: (slot: LetterSlot) => void;
+  onBonusPress: () => void;
+}) {
+  const slots = buildSlots(unit.letters, collected);
+  const isUnitComplete = slots.every((slot) => slot.state === 'stuck');
+
+  return (
+    <View style={styles.page}>
+      <View style={[styles.pageTab, { backgroundColor: isCurrent ? colors.amber : colors.teal }]}>
+        <Text style={[styles.pageTabText, { color: isCurrent ? colors.amberInk : colors.card }]}>
+          Unidade {unitNumber} · {unit.range}
+          {!isCurrent && ' · concluída'}
+        </Text>
+      </View>
+      <View style={[styles.pageSheet, { backgroundColor: colors.card, shadowColor: colors.ink }]}>
+        <Text style={[styles.pageName, { color: colors.inkSoft }]}>{unit.title}</Text>
+        <View style={styles.grid}>
+          {slots.map((slot) => (
+            <Sticker key={slot.letter} slot={slot} colors={colors} onPress={() => onSlotPress(slot)} />
+          ))}
+          <BonusSlot unlocked={isUnitComplete} claimed={isBonusClaimed} colors={colors} onPress={onBonusPress} />
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -184,25 +275,30 @@ function Sticker({
 
 function BonusSlot({
   unlocked,
+  claimed,
   colors,
   onPress,
 }: {
   unlocked: boolean;
+  claimed: boolean;
   colors: ReturnType<typeof useAlbumColors>;
   onPress: () => void;
 }) {
+  const isGold = unlocked || claimed;
   return (
     <TouchableOpacity
       style={[
         styles.slot,
         styles.slotBonus,
         { borderColor: colors.line },
-        unlocked && { backgroundColor: colors.amber, borderColor: colors.amber },
+        isGold && { backgroundColor: colors.amber, borderColor: colors.amber },
       ]}
       onPress={onPress}
     >
-      <Ionicons name="star-outline" size={22} color={unlocked ? colors.amberInk : colors.inkSoft} />
-      <Text style={[styles.bonusText, { color: unlocked ? colors.amberInk : colors.inkSoft }]}>Bônus</Text>
+      <Ionicons name={claimed ? 'star' : 'star-outline'} size={22} color={isGold ? colors.amberInk : colors.inkSoft} />
+      <Text style={[styles.bonusText, { color: isGold ? colors.amberInk : colors.inkSoft }]}>
+        {claimed ? 'Colada' : 'Bônus'}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -220,6 +316,14 @@ const styles = StyleSheet.create({
   weekLabel: { marginLeft: 4, fontSize: 11.5, fontWeight: '600' },
 
   scrollContent: { paddingBottom: 24 },
+  sectionLabel: {
+    marginHorizontal: 16,
+    marginTop: 18,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   page: { position: 'relative', marginHorizontal: 16, marginTop: 18 },
   pageTab: {
     position: 'absolute',
