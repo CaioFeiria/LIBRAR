@@ -5,8 +5,8 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <Stack>
-        <Stack.Screen name="index" options={{ title: 'Alfabeto em Libras' }} />
-        <Stack.Screen name="letter/[letter]" options={{ title: 'Letra' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="letter/[letter]" options={{ title: 'Praticar sinal' }} />
       </Stack>
     </SafeAreaProvider>
   );
