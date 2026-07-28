@@ -36,6 +36,9 @@ function imageArt(source: ImageSourcePropType): ComponentType<LetterArtProps> {
 const LETTER_ART: Partial<Record<string, ComponentType<LetterArtProps>>> = {
   A: imageArt(require('@/assets/letters/letra_a.png')),
   B: imageArt(require('@/assets/letters/letra_b.png')),
+  C: imageArt(require('@/assets/letters/letra_c.png')),
+  D: imageArt(require('@/assets/letters/letra_d.png')),
+  E: imageArt(require('@/assets/letters/letra_e.png')),
 };
 
 export function LetterArt({ letter, color, size }: { letter: string } & LetterArtProps) {

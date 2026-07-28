@@ -17,23 +17,19 @@ import {
   Unit,
   UNITS,
 } from '@/constants/album';
+import { DEMO_CLAIMED_BONUSES, DEMO_COLLECTED_LETTERS } from '@/constants/demoProgress';
 import { useAlbumColors } from '@/constants/theme';
 
 const WEEK_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const WEEK_DONE = [true, true, true, true, true, false, false];
 const TODAY_INDEX = 4;
 
-// Progresso local de demonstração — ainda sem persistência real (AsyncStorage/backend).
-// Simulando a Unidade 1 inteira colada, com o bônus desbloqueado e ainda não aberto.
-const COLLECTED_LETTERS = new Set(['A', 'B', 'C', 'D', 'E']);
-const CLAIMED_BONUSES = new Set<string>();
-
 export default function AlbumScreen() {
   const router = useRouter();
   const colors = useAlbumColors();
   const alert = useAppAlert();
-  const [collected] = useState(COLLECTED_LETTERS);
-  const [claimedBonuses, setClaimedBonuses] = useState(CLAIMED_BONUSES);
+  const [collected] = useState(DEMO_COLLECTED_LETTERS);
+  const [claimedBonuses, setClaimedBonuses] = useState(DEMO_CLAIMED_BONUSES);
 
   const currentUnit = useMemo(() => findCurrentUnit(collected, claimedBonuses), [collected, claimedBonuses]);
   const currentUnitIndex = UNITS.findIndex((unit) => unit.id === currentUnit.id);

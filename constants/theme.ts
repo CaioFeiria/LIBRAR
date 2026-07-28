@@ -45,3 +45,13 @@ const dark: AlbumColors = {
 export function useAlbumColors(): AlbumColors {
   return useColorScheme() === 'dark' ? dark : light;
 }
+
+/** Converte um hex de 6 dígitos (ex.: colors.amber) num rgba com a opacidade pedida. */
+export function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const value = parseInt(clean, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
